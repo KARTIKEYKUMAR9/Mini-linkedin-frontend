@@ -1,24 +1,25 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import API from '../utils/api';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import API from "../utils/api";
 
 const Home = () => {
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [posts, setPosts] = useState([]);
   const [commentModal, setCommentModal] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
 
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId'); // adjust based on auth setup
+  const user = JSON.parse(localStorage.getItem("user")); // ✅ full user object
+  const userId = user?._id;
 
   const fetchPosts = async () => {
     try {
-      const res = await API.get('/posts');
+      const res = await API.get("/posts");
       setPosts(res.data);
     } catch (err) {
-      console.error('Failed to load posts');
+      console.error("Failed to load posts");
     }
   };
 
@@ -26,24 +27,30 @@ const Home = () => {
     e.preventDefault();
     if (!content.trim()) return;
     try {
-      await API.post('/posts', { content });
-      setContent('');
+      await API.post("/posts", { content });
+      setContent("");
       fetchPosts();
     } catch (err) {
       if (err.response?.status === 401) {
-        alert('Please log in again.');
+        alert("Please log in again.");
         localStorage.clear();
-        navigate('/login');
+        navigate("/login");
       }
     }
   };
 
   const handleLike = async (postId) => {
     try {
-      await API.put(`/posts/${postId}/like`);
-      fetchPosts();
+      const res = await API.post(`/posts/${postId}/like`);
+      const updatedPost = res.data;
+
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === updatedPost._id ? updatedPost : post
+        )
+      );
     } catch (err) {
-      console.error('Failed to like post');
+      console.error("Like error:", err);
     }
   };
 
@@ -58,14 +65,16 @@ const Home = () => {
     }
   };
 
-  const handleCommentSubmit = async (e,postId) => {
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     try {
-      await API.post(`/posts/${selectedPostId}/comments`, { text: newComment });
+      await API.post(`/posts/${selectedPostId}/comments`, {
+        text: newComment,
+      });
       const res = await API.get(`/posts/${selectedPostId}/comments`);
       setComments(res.data);
-      setNewComment('');
+      setNewComment("");
     } catch {
       console.error("Failed to post comment");
     }
@@ -80,7 +89,9 @@ const Home = () => {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Post Form */}
         <div className="bg-white p-6 rounded-2xl shadow-md col-span-1 h-fit sticky top-10">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-4">Create a Post</h3>
+          <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+            Create a Post
+          </h3>
           <form onSubmit={handleSubmit}>
             <textarea
               rows="4"
@@ -111,33 +122,36 @@ const Home = () => {
               >
                 <div className="flex items-start gap-4">
                   <img
-                    src={post.author?.avatar || '/Default_avatar.png'}
+                    src={post.author?.avatar || "/Default_avatar.png"}
                     alt="avatar"
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   <div className="flex-grow">
-                    <p className="text-gray-900 text-lg whitespace-pre-line mb-1">{post.content}</p>
+                    <p className="text-gray-900 text-lg whitespace-pre-line mb-1">
+                      {post.content}
+                    </p>
                     <div className="flex justify-between items-center mt-2 text-sm text-gray-500">
                       <span>
-                        —{' '}
+                        —{" "}
                         <a
-                          href={`/profile/${post.author?._id || ''}`}
+                          href={`/profile/${post.author?._id || ""}`}
                           className="font-medium text-blue-600 hover:underline"
                         >
-                          {post.author?.name || 'Unknown'}
-                        </a>{' '}
+                          {post.author?.name || "Unknown"}
+                        </a>{" "}
                         | {new Date(post.createdAt).toLocaleString()}
                       </span>
                       <div className="flex gap-4">
                         <button
                           onClick={() => handleLike(post._id)}
-                          className="flex items-center bg-zinc-600 border-gray-400 gap-1 text-white hover:text-sky-400"
+                          className="flex items-center bg-zinc-600 border-gray-400 gap-1 text-white hover:text-sky-400 px-2 py-1 rounded"
                         >
-                          {post.likes?.includes(userId) ? '❤️' : '🤍'} {post.likes?.length || 0}
+                          {post.likes?.includes(userId) ? "❤️" : "🤍"}{" "}
+                          {post.likes?.length || 0}
                         </button>
                         <button
                           onClick={() => openCommentModal(post._id)}
-                          className="flex items-center gap-1 bg-zinc-600 text-white hover:text-sky-400"
+                          className="flex items-center gap-1 bg-zinc-600 text-white hover:text-sky-400 px-2 py-1 rounded"
                         >
                           💬 Comment
                         </button>
@@ -170,13 +184,15 @@ const Home = () => {
                 comments.map((comment) => (
                   <div key={comment._id} className="flex gap-3">
                     <img
-                      src={comment.author?.avatar || '/Default_avatar.png'}
+                      src={comment.author?.avatar || "/Default_avatar.png"}
                       alt="avatar"
                       className="w-8 h-8 rounded-full object-cover"
                     />
                     <div>
                       <p className="text-sm">
-                        <span className="font-semibold text-gray-800">{comment.author?.name}</span>{' '}
+                        <span className="font-semibold text-gray-800">
+                          {comment.author?.name}
+                        </span>{" "}
                         <span className="text-gray-700">{comment.text}</span>
                       </p>
                       <p className="text-xs text-gray-400">
@@ -188,7 +204,10 @@ const Home = () => {
               )}
             </div>
 
-            <form onSubmit={(e)=> handleCommentSubmit(e, selectedPostId)} className="flex items-center gap-2">
+            <form
+              onSubmit={handleCommentSubmit}
+              className="flex items-center gap-2"
+            >
               <input
                 type="text"
                 placeholder="Write a comment..."
