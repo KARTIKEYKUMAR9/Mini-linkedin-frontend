@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}`, // 🔁 change to Render URL after deployment
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}`,
+  withCredentials: true, // 🔁 change to Render URL after deployment
+  // baseURL:'http://localhost:5000/api',
 });
 
 API.interceptors.request.use((config) => {
