@@ -40,19 +40,14 @@ const Home = () => {
   };
 
   const handleLike = async (postId) => {
-    try {
-      const res = await API.post(`/posts/${postId}/like`);
-      const updatedPost = res.data;
+  try {
+    await API.post(`/posts/${postId}/like`);
+    fetchPosts(); // Re-fetch all posts with updated likes and populated authors
+  } catch (err) {
+    console.error("Like error:", err);
+  }
+};
 
-      setPosts((prevPosts) =>
-        prevPosts.map((post) =>
-          post._id === updatedPost._id ? updatedPost : post
-        )
-      );
-    } catch (err) {
-      console.error("Like error:", err);
-    }
-  };
 
   const openCommentModal = async (postId) => {
     setSelectedPostId(postId);
