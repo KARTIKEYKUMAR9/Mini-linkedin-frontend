@@ -9,7 +9,7 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      const res = await API.get(`/users/${id}`);
+      const res = await API.get(`api/users/${id}`);
       setUser(res.data.user);
       setPosts(res.data.posts);
     } catch (err) {
