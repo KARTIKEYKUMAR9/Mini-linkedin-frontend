@@ -15,7 +15,7 @@ const Home = () => {
 
   const fetchPosts = async () => {
     try {
-      const res = await API.get('api/posts');
+      const res = await API.get('/posts');
       setPosts(res.data);
     } catch (err) {
       console.error('Failed to load posts');
