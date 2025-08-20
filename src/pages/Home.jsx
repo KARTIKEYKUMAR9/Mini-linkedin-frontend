@@ -40,14 +40,18 @@ const Home = () => {
   };
 
   const handleLike = async (postId) => {
-  try {
-    await API.post(`/posts/${postId}/like`);
-    fetchPosts(); // Re-fetch all posts with updated likes and populated authors
-  } catch (err) {
-    console.error("Like error:", err);
-  }
-};
-
+    try {
+      const res = await API.post(`/posts/${postId}/like`);
+      // res.data should return { likes: updatedLikesArray }
+      setPosts((prevPosts) =>
+        prevPosts.map((p) =>
+          p._id === postId ? { ...p, likes: res.data.likes } : p
+        )
+      );
+    } catch (err) {
+      console.error("Like error:", err);
+    }
+  };
 
   const openCommentModal = async (postId) => {
     setSelectedPostId(postId);
@@ -141,8 +145,8 @@ const Home = () => {
                           onClick={() => handleLike(post._id)}
                           className="flex items-center bg-zinc-600 border-gray-400 gap-1 text-white hover:text-sky-400 px-2 py-1 rounded"
                         >
-                          {post.likes?.includes(userId) ? "❤️" : "🤍"}{" "}
-                          {post.likes?.length || 0}
+                          {post.likes?.includes(userId) ? "❤️" : "🤍"} {post.likes?.length || 0}
+
                         </button>
                         <button
                           onClick={() => openCommentModal(post._id)}
