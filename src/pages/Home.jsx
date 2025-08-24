@@ -9,10 +9,12 @@ const Home = () => {
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editedContent, setEditedContent] = useState("");
 
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user")); // ✅ full user object
-  const userId = user?._id;
+  const userId = user?.id;
 
   const fetchPosts = async () => {
     try {
@@ -23,6 +25,7 @@ const Home = () => {
     }
   };
 
+  // create new post
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -39,6 +42,7 @@ const Home = () => {
     }
   };
 
+  // Toggle like
   const handleLike = async (postId) => {
     try {
       const res = await API.post(`/posts/${postId}/like`);
@@ -53,6 +57,7 @@ const Home = () => {
     }
   };
 
+  //open comment model and fetch coments
   const openCommentModal = async (postId) => {
     setSelectedPostId(postId);
     setCommentModal(true);
@@ -63,7 +68,7 @@ const Home = () => {
       console.error("Failed to load comments");
     }
   };
-
+  // submit new comment
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -76,6 +81,49 @@ const Home = () => {
       setNewComment("");
     } catch {
       console.error("Failed to post comment");
+    }
+  };
+
+  // edit post
+  const startEditingPost = (postId, content) => {
+    setEditingPostId(postId);
+    setEditingContent(content);
+  };
+
+  const handleEditSubmit = async (postId) => {
+    try {
+      await API.put(`/posts/${postId}`, { content: editedContent });
+      setEditingPostId(null);
+      setEditedContent("");
+      fetchPosts();
+    } catch (err) {
+      console.error("Edit post failed", err);
+    }
+  };
+
+  // Delete post
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm("Are you sure you want to delete this post")) return;
+
+    try {
+      await API.delete(`/posts/${postId}`);
+      fetchPosts();
+    } catch (err) {
+      console.error("Detete post failed", err);
+    }
+  };
+
+  // Delete Comment
+
+  const handleDeleteComment = async (postId, commentId) => {
+    if (!window.confirm("Delete this comment?")) return;
+
+    try {
+      await API.delete(`/posts/${postId}/comments/${commentId}`);
+      const res = await API.get(`/posts/${postId}/comments`);
+      setComments(res.data);
+    } catch (err) {
+      console.error("Delete comment failed", err);
     }
   };
 
@@ -126,9 +174,53 @@ const Home = () => {
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   <div className="flex-grow">
-                    <p className="text-gray-900 text-lg whitespace-pre-line mb-1">
-                      {post.content}
-                    </p>
+                    {editingPostId === post._id ? (
+                      <>
+                        <textarea
+                          className="w-full border p-2 rounded bg-gray-200 text-black"
+                          value={editedContent}
+                          onChange={(e) => setEditedContent(e.target.value)}
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => handleEditSubmit(post._id)}
+                            className="bg-green-600 text-white px-3 py-1 rounded"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingPostId(null)}
+                            className="bg-gray-400 text-white px-3 py-1 rounded"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-gray-900 text-lg whitespace-pre-line mb-1">
+                        {post.content}
+                      </p>
+                    )}
+
+                    {post.author?._id === userId &&
+                      editingPostId !== post._id && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() =>
+                              startEditingPost(post._id, post.content)
+                            }
+                            className="bg-yellow-400 text-white px-3 py-1 rounded"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeletePost(post._id)}
+                            className="bg-red-500 text-white px-3 py-1 rounded"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     <div className="flex justify-between items-center mt-2 text-sm text-gray-500">
                       <span>
                         —{" "}
@@ -145,8 +237,8 @@ const Home = () => {
                           onClick={() => handleLike(post._id)}
                           className="flex items-center bg-zinc-600 border-gray-400 gap-1 text-white hover:text-sky-400 px-2 py-1 rounded"
                         >
-                          {post.likes?.includes(userId) ? "❤️" : "🤍"} {post.likes?.length || 0}
-
+                          {post.likes?.includes(userId) ? `❤️` : `🤍`}{" "}
+                          {post.likes?.length || 0}
                         </button>
                         <button
                           onClick={() => openCommentModal(post._id)}
@@ -169,7 +261,7 @@ const Home = () => {
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white w-full max-w-xl rounded-lg shadow-lg p-6 relative">
             <button
-              className="absolute top-3 right-3 text-gray-600 bg-gray-200 hover:text-black text-xl"
+              className="absolute top-3 right-3 text-gray-800 bg-white hover:text-black text-xl"
               onClick={() => setCommentModal(false)}
             >
               ×
@@ -198,6 +290,16 @@ const Home = () => {
                         {new Date(comment.createdAt).toLocaleString()}
                       </p>
                     </div>
+                    {comment.author?._id === userId && (
+                      <button
+                        onClick={() =>
+                          handleDeleteComment(selectedPostId, comment._id)
+                        }
+                        className="ml-2 bg-red-600 text-white text-xs"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 ))
               )}
