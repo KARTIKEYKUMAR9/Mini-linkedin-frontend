@@ -13,19 +13,21 @@ const Home = () => {
   const [editedContent, setEditedContent] = useState("");
 
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user")); // ✅ full user object
+  const user = JSON.parse(localStorage.getItem("user")); 
   const userId = user?.id;
+  console.log("userId ", userId);
+  
 
   const fetchPosts = async () => {
     try {
       const res = await API.get("/posts");
-      setPosts(res.data);
+      setPosts(res.data);console.log("Posts",posts);
+      
     } catch (err) {
       console.error("Failed to load posts");
     }
   };
 
-  // create new post
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -42,11 +44,9 @@ const Home = () => {
     }
   };
 
-  // Toggle like
   const handleLike = async (postId) => {
     try {
       const res = await API.post(`/posts/${postId}/like`);
-      // res.data should return { likes: updatedLikesArray }
       setPosts((prevPosts) =>
         prevPosts.map((p) =>
           p._id === postId ? { ...p, likes: res.data.likes } : p
@@ -57,7 +57,6 @@ const Home = () => {
     }
   };
 
-  //open comment model and fetch coments
   const openCommentModal = async (postId) => {
     setSelectedPostId(postId);
     setCommentModal(true);
@@ -68,7 +67,7 @@ const Home = () => {
       console.error("Failed to load comments");
     }
   };
-  // submit new comment
+
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -84,10 +83,10 @@ const Home = () => {
     }
   };
 
-  // edit post
+  // Fixed setter name here
   const startEditingPost = (postId, content) => {
     setEditingPostId(postId);
-    setEditingContent(content);
+    setEditedContent(content);
   };
 
   const handleEditSubmit = async (postId) => {
@@ -101,23 +100,18 @@ const Home = () => {
     }
   };
 
-  // Delete post
   const handleDeletePost = async (postId) => {
     if (!window.confirm("Are you sure you want to delete this post")) return;
-
     try {
       await API.delete(`/posts/${postId}`);
       fetchPosts();
     } catch (err) {
-      console.error("Detete post failed", err);
+      console.error("Delete post failed", err);
     }
   };
 
-  // Delete Comment
-
   const handleDeleteComment = async (postId, commentId) => {
     if (!window.confirm("Delete this comment?")) return;
-
     try {
       await API.delete(`/posts/${postId}/comments/${commentId}`);
       const res = await API.get(`/posts/${postId}/comments`);
@@ -134,7 +128,7 @@ const Home = () => {
   return (
     <div className="bg-gray-100 min-h-screen py-10 px-4">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Post Form */}
+
         <div className="bg-white p-6 rounded-2xl shadow-md col-span-1 h-fit sticky top-10">
           <h3 className="text-2xl font-semibold text-gray-800 mb-4">
             Create a Post
@@ -156,7 +150,6 @@ const Home = () => {
           </form>
         </div>
 
-        {/* Feed */}
         <div className="md:col-span-2">
           <h3 className="text-3xl font-bold text-gray-800 mb-6">Public Feed</h3>
           {posts.length === 0 ? (
@@ -202,7 +195,7 @@ const Home = () => {
                       </p>
                     )}
 
-                    {post.author?._id === userId &&
+                    {(post.author?._id?.toString() === userId) &&
                       editingPostId !== post._id && (
                         <div className="flex gap-2 mt-2">
                           <button
@@ -237,7 +230,9 @@ const Home = () => {
                           onClick={() => handleLike(post._id)}
                           className="flex items-center bg-zinc-600 border-gray-400 gap-1 text-white hover:text-sky-400 px-2 py-1 rounded"
                         >
-                          {post.likes?.includes(userId) ? `❤️` : `🤍`}{" "}
+                          {post.likes?.some((id) => id.toString() === userId)
+                            ? `❤️`
+                            : `🤍`}{" "}
                           {post.likes?.length || 0}
                         </button>
                         <button
@@ -256,7 +251,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Comment Modal */}
       {commentModal && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white w-full max-w-xl rounded-lg shadow-lg p-6 relative">
@@ -290,7 +284,7 @@ const Home = () => {
                         {new Date(comment.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    {comment.author?._id === userId && (
+                    {comment.author?._id?.toString() === userId && (
                       <button
                         onClick={() =>
                           handleDeleteComment(selectedPostId, comment._id)
@@ -305,10 +299,7 @@ const Home = () => {
               )}
             </div>
 
-            <form
-              onSubmit={handleCommentSubmit}
-              className="flex items-center gap-2"
-            >
+            <form onSubmit={handleCommentSubmit} className="flex items-center gap-2">
               <input
                 type="text"
                 placeholder="Write a comment..."
